@@ -1,32 +1,43 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using System.Collections;
 
-public class EnemySpawn : MonoBehaviour
+public class EnemySpawner : MonoBehaviour
 {
-    public GameObject enemyPrefab;    // Enemy prefab to spawn
-    [SerializeField] int enemyCount;  // Total number of enemies to spawn
-    [SerializeField] Transform spawnPosition;  // Position to spawn enemies
+    [SerializeField] private GameObject enemyPrefab;
+    [SerializeField] private int totalEnemiesToSpawn = 10;  // Set a default value for the total number of enemies
+    [SerializeField] private Transform spawnPoint;
+    [SerializeField] private float spawnInterval = 1f;  // Time between spawns
+    [SerializeField] private GameObject playButton;
 
-    private int currentEnemyCount = 0;  // To keep track of how many enemies have spawned
+    private int spawnedEnemyCount = 0;  // Track how many enemies have been spawned
 
-    public void SpawnEnemy()
+    public void StartSpawning()
     {
-        // Start spawning enemies when the game starts
-        StartCoroutine(SpawnEnemy2());
+      // TowerPlacement.Instance.DisableTowerPlacement();
+        // Deactivate the Play button to prevent multiple spawns
+        playButton.SetActive(false);
+
+        // Start the coroutine that spawns enemies over time
+        StartCoroutine(SpawnEnemiesCoroutine());
     } 
 
-    IEnumerator SpawnEnemy2()
+    // Coroutine to spawn enemies at regular intervals
+    private IEnumerator SpawnEnemiesCoroutine()
     {
-        while (currentEnemyCount < enemyCount)  // Spawn until the specified number of enemies are reached
+        // Spawn enemies until the specified limit is reached
+        while (spawnedEnemyCount < totalEnemiesToSpawn)
         {
-            // Spawn an enemy at the given position
-            Instantiate(enemyPrefab, spawnPosition.position, Quaternion.identity);
+            // Instantiate the enemy at the spawn point
+            Instantiate(enemyPrefab, spawnPoint.position, Quaternion.identity);
 
-            currentEnemyCount++;  // Increment the enemy count
+            // Increment the count of spawned enemies
+            spawnedEnemyCount++;
 
-            // Wait for 1 second before spawning the next enemy
-            yield return new WaitForSeconds(1f);
+            // Wait for the specified interval before spawning the next enemy
+            yield return new WaitForSeconds(spawnInterval);
         }
+
+        // Optional: Add logic here if you want something to happen when all enemies are spawned
+        Debug.Log("All enemies spawned!");
     }
 }

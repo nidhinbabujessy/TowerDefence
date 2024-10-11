@@ -1,28 +1,114 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
 using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
 
 public class Score : MonoBehaviour
 {
-    public TMP_Text Coins;
-    private int count;
-    // Start is called before the first frame update
-    void Start()
+    public static Score Instance;
+
+    [SerializeField] private TMP_Text coinsText;
+    [SerializeField] GameObject play;
+    int count=100;
+    private int score = 0;
+    public Button upgradeButton;
+
+    public delegate void ScoreChangedHandler(int newScore);
+    public event ScoreChangedHandler ScoreChanged;
+
+    private void Awake()
     {
-        count = 0;
-        GameEvents.eventss.bulletHit += add;
-        
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 
-    // Update is called once per frame
-    void Update()
+    private void Update()
     {
-        
+        coinsText.text= score.ToString();
+        if (score >= 10)
+        {
+            upgradeButton.interactable = true;
+            upgradeButton.GetComponent<Image>().color = Color.green; // Change color to indicate availability
+        }
+        else
+        {
+            upgradeButton.interactable = false;
+            upgradeButton.GetComponent<Image>().color = Color.red; // Change color to indicate unavailability
+        }
+        if(count==100)
+        {
+            play.SetActive(true);
+            count = 0;
+        }
     }
-    void add()
+
+    private void OnEnable()
     {
-        count=count+10;
-        Coins.text =count.ToString();
+        if (GameEvents.Instance != null)
+        {
+            GameEvents.Instance.BulletHit += OnBulletHit;
+        }
+        else
+        {
+            Debug.LogWarning("GameEvents instance is not set!");
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (GameEvents.Instance != null)
+        {
+            GameEvents.Instance.BulletHit -= OnBulletHit;
+        }
+        else
+        {
+            Debug.LogWarning("GameEvents instance is not set!");
+        }
+    }
+
+    private void Start()
+    {
+        UpdateScoreUI();
+    }
+
+    private void OnBulletHit(Vector3 hitPosition, GameObject hitObject)
+    {
+
+        score += 10;
+        UpdateScoreUI();
+    }
+
+    private void UpdateScoreUI()
+    {
+        coinsText.text = score.ToString();
+        ScoreChanged?.Invoke(score);  // Notify listeners about score change
+    }
+
+    public bool HasEnoughScore(int requiredScore)
+    {
+        return score >= requiredScore;
+    }
+
+    public void SpendScore(int amount)
+    {
+        if (score - amount >= 0)
+        {
+            score -= amount;
+            UpdateScoreUI();
+        }
+        else
+        {
+            Debug.LogWarning("Not enough score to spend!");
+        }
+    }
+   public void ScoreIncrease()
+    {
+        count = count + 10;
+        score = score + 10;
     }
 }

@@ -2,81 +2,79 @@ using UnityEngine;
 
 public class TowerFireSystem : MonoBehaviour
 {
-    public GameObject bulletPrefab;       // Bullet prefab to shoot
-    public Transform firePoint;           // Point from where the bullet will be shot
-    public float fireRate = 1f;           // Time between shots
-    public float fireRadius = 0.54f;      // Radius to detect enemies
-    public LayerMask enemyLayer;          // Layer mask to filter enemies
-    public float bulletSpeed = 10f;       // Speed of the fired bullet
+    [SerializeField] private GameObject bulletPrefab;
+    [SerializeField] private Transform firePoint;
+    [SerializeField] private float fireRate = 1f;
+    [SerializeField] private float fireRadius = 0.54f;
+    [SerializeField] private LayerMask enemyLayer;
+    [SerializeField] private float bulletSpeed = 10f;
 
-    private float nextFireTime = 0f;      // Timer for firing control
-    private Transform targetEnemy = null; // Targeted enemy
+    private float nextFireTime;
+    private Transform targetEnemy;
 
-    void Update()
+    private void Update()
     {
         FindTargetEnemy();
+        TryToShoot();
+    }
 
-        // If there's a target enemy and it's time to fire
+    private void FindTargetEnemy()
+    {
+        Collider[] enemiesInRange = Physics.OverlapSphere(transform.position, fireRadius, enemyLayer);
+        if (enemiesInRange.Length == 0) return;
+
+        targetEnemy = GetClosestEnemy(enemiesInRange);
+        RotateTowardsTarget();
+    }
+
+    private Transform GetClosestEnemy(Collider[] enemiesInRange)
+    {
+        Transform closest = null;
+        float closestDistance = Mathf.Infinity;
+
+        foreach (var enemy in enemiesInRange)
+        {
+            float distance = Vector3.Distance(transform.position, enemy.transform.position);
+            if (distance < closestDistance)
+            {
+                closest = enemy.transform;
+                closestDistance = distance;
+            }
+        }
+
+        return closest;
+    }
+
+    private void RotateTowardsTarget()
+    {
+        if (targetEnemy == null) return;
+
+        Vector3 direction = (targetEnemy.position - transform.position).normalized;
+        Quaternion rotation = Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z));
+        transform.rotation = Quaternion.Slerp(transform.rotation, rotation, Time.deltaTime * 5f);
+    }
+
+    private void TryToShoot()
+    {
         if (targetEnemy != null && Time.time >= nextFireTime)
         {
-            ShootAtEnemy();
-            nextFireTime = Time.time + 1f / fireRate; // Reset fire time
+            ShootAtTarget();
+            nextFireTime = Time.time + 1f / fireRate;
         }
     }
 
-    // Method to find the nearest enemy within the fire radius
-    void FindTargetEnemy()
+    private void ShootAtTarget()
     {
-        Collider[] hitEnemies = Physics.OverlapSphere(transform.position, fireRadius, enemyLayer);
-
-        if (hitEnemies.Length > 0)
-        {
-            float closestDistance = Mathf.Infinity;
-            Transform closestEnemy = null;
-
-            // Loop through all enemies in range and find the closest one
-            foreach (Collider enemy in hitEnemies)
-            {
-                float distanceToEnemy = Vector3.Distance(transform.position, enemy.transform.position);
-                if (distanceToEnemy < closestDistance)
-                {
-                    closestDistance = distanceToEnemy;
-                    closestEnemy = enemy.transform;
-                }
-            }
-
-            targetEnemy = closestEnemy;
-
-            // Look at the closest enemy
-            if (targetEnemy != null)
-            {
-                Vector3 direction = (targetEnemy.position - transform.position).normalized;
-                Quaternion lookRotation = Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z));
-                transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 5f);
-            }
-        }
-        else
-        {
-            targetEnemy = null; // No enemies in range
-        }
-    }
-
-    // Method to shoot a bullet at the target enemy
-    void ShootAtEnemy()
-    {
-        // Instantiate bullet and set its direction towards the target
         GameObject bullet = Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
         Rigidbody rb = bullet.GetComponent<Rigidbody>();
-
-        if (rb != null && targetEnemy != null)
+        if (rb != null)
         {
             Vector3 direction = (targetEnemy.position - firePoint.position).normalized;
             rb.velocity = direction * bulletSpeed;
         }
     }
 
-    // Draw the detection radius in the editor for visualization
-    void OnDrawGizmosSelected()
+    private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, fireRadius);

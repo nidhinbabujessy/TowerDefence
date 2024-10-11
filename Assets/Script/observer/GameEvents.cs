@@ -1,22 +1,38 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class GameEvents : MonoBehaviour
 {
-    public static GameEvents eventss;
+    public static GameEvents Instance;
+
+    // BulletHit event with parameters
+    public delegate void BulletHitHandler(Vector3 hitPosition, GameObject hitObject);
+    public event BulletHitHandler BulletHit;
+
+    // Upgrade event
+    public delegate void UpgradeHandler();
+    public event UpgradeHandler UpgradeEvent;
 
     private void Awake()
     {
-        eventss = this;
+        if (Instance == null)
+        {
+            Instance = this;  
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 
-
-    public event Action bulletHit;
-
-    public void bullethiting()
+    // Method to trigger BulletHit event with parameters
+    public void TriggerBulletHit(Vector3 hitPosition, GameObject hitObject)
     {
-        bulletHit();
+        BulletHit?.Invoke(hitPosition, hitObject);  // Trigger event with parameters
+    }
+
+    // Method to trigger Upgrade event
+    public void TriggerUpgrade()
+    {
+        UpgradeEvent?.Invoke();  // Trigger upgrade event
     }
 }

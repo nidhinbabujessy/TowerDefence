@@ -1,83 +1,76 @@
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.UI;
 
-public class playerController : MonoBehaviour
+public class PlayerController : MonoBehaviour
 {
-    public NavMeshAgent agent;
-    public Vector3[] destinations;  // Array of destination points (using Vector3 instead of Transform)
-    public Animator animator;
+    [SerializeField] private NavMeshAgent agent;
+    [SerializeField] private Vector3[] destinations;
+    [SerializeField] private Animator animator;
+    [SerializeField] private int health = 3;
+    [SerializeField] private float normalSpeed = 1f;
+   
+    private const float attackSpeed = 1.5f;
 
-    public float normalSpeed = 3.5f; // Normal walking speed
-    public float attackSpeed = 1.5f; // Speed when the agent is attacking
-
-    [SerializeField] private int health = 3; // Player health
-
-    private Vector3 currentDestination;
-
-    void Start()
+    private void Start()
     {
-        // Ensure that the agent and destinations are set
         if (agent == null || destinations.Length == 0)
         {
-            Debug.LogError("NavMeshAgent or Destination array not set.");
+            Debug.LogError("Missing components or destinations.");
             return;
         }
 
-        // Set the agent's speed to normal speed initially
         agent.speed = normalSpeed;
-
-        // Set an initial random destination when the game starts
         SetRandomDestination();
     }
 
-    void Update()
+    private void Update()
     {
-        if (agent == null) return;
+        HandleMovement();
+        HandleHealth();
+    }
 
-        // Check if the agent has reached the destination
-        if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
-        {
-            // Trigger the "attack" animation and slow down the agent when reaching the destination
-            animator.SetBool("attack", true);
-            agent.speed = attackSpeed; // Reduce speed during attack
-        }
-        else
-        {
-            // Ensure the "attack" animation is turned off while the agent is moving
-            animator.SetBool("attack", false);
-            agent.speed = normalSpeed; // Restore normal speed while moving
-        }
+    private void HandleMovement()
+    {
+        if (agent.pathPending || agent.remainingDistance > agent.stoppingDistance) return;
 
-        // Optionally, check if we should move to a new random destination
-        if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance && !animator.GetBool("attack"))
+        // Animation and speed adjustment
+        animator.SetBool("attack", true);
+        agent.speed = attackSpeed;
+
+        if (agent.remainingDistance <= agent.stoppingDistance && !animator.GetBool("attack"))
         {
-            SetRandomDestination(); // Pick another random destination after the attack
+            SetRandomDestination();
         }
     }
 
-    // Method to set a random destination from the array of Vector3 positions
-    void SetRandomDestination()
+    private void HandleHealth()
     {
-        if (destinations.Length == 0) return; // Avoid error if no destinations are set
+        // Handle player health logic
+    }
 
-        int randomIndex = Random.Range(0, destinations.Length);  // Get a random index
-        currentDestination = destinations[randomIndex];          // Set the current destination
-        agent.SetDestination(currentDestination);                 // Move agent to the random destination
+    private void SetRandomDestination()
+    {
+        int randomIndex = Random.Range(0, destinations.Length);
+        agent.SetDestination(destinations[randomIndex]);
     }
 
     private void OnCollisionEnter(Collision collision)
     {
-        if (collision.gameObject.CompareTag("Bullet")) // Check if the collided object is tagged as "Bullet"
+        if (collision.gameObject.CompareTag("Bullet"))
         {
-            Debug.Log("Hit by bullet!");
-            health--;
+            TakeDamage();
+        }
+    }
 
-            if (health <= 0) // If health reaches zero, destroy the player
-            {
-                Debug.Log("Player's health is 0");
-                GameEvents.eventss.bullethiting(); // using observer pattern
-                Destroy(gameObject); // Destroy this player object
-            }
+    private void TakeDamage()
+    {
+        health--;
+        if (health <= 0)
+        {
+            Debug.Log("Player defeated.");
+            Score.Instance.ScoreIncrease();
+            Destroy(gameObject);
         }
     }
 }

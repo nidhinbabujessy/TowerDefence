@@ -1,59 +1,101 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using System.Collections.Generic;
 
 public class TowerPlacement : MonoBehaviour
 {
-    public GameObject towerPrefab;
-    public GameObject ghostTowerPrefab; // Ghost tower for preview
-    public LayerMask gridLayer;
-    public LayerMask towerLayer;
-    public float towerRadius = 0f; // Radius to check for existing towers
+    public static TowerPlacement Instance;
 
-    private GameObject ghostTower; // Instance of the ghost tower
-    private Renderer ghostRenderer; // To control ghost tower color
+    [SerializeField] private GameObject towerPrefab;
+    [SerializeField] private GameObject ghostTowerPrefab;
+    [SerializeField] private LayerMask gridLayer;
+    [SerializeField] private LayerMask towerLayer;
+    [SerializeField] private float towerRadius = 0.5f;
 
-    void Start()
+    private GameObject ghostTower;
+    private Renderer ghostRenderer;
+
+    public bool upgradebool;
+
+    // List to store placed towers
+    private List<GameObject> placedTowers = new List<GameObject>();
+
+    private void Start()
     {
-        // Instantiate the ghost tower and disable it at the start
+        InitializeGhostTower();
+    }
+
+    private void Update()
+    {
+        if (upgradebool)
+        {
+            UpdateGhostTower();
+            HandleTowerPlacement();
+        }
+    }
+
+    private void InitializeGhostTower()
+    {
         ghostTower = Instantiate(ghostTowerPrefab);
         ghostTower.SetActive(false);
         ghostRenderer = ghostTower.GetComponent<Renderer>();
     }
 
-    void Update()
+    private void UpdateGhostTower()
     {
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, gridLayer))
         {
             Vector3 gridPosition = new Vector3(Mathf.Round(hit.point.x), 0, Mathf.Round(hit.point.z));
-
-            // Show the ghost tower and update its position
             ghostTower.SetActive(true);
             ghostTower.transform.position = gridPosition;
-
-            // Check if a tower already exists at the grid position
-            if (Physics.CheckSphere(gridPosition, towerRadius, towerLayer))
-            {
-                // Invalid placement, set ghost tower to red
-                ghostRenderer.material.color = Color.red;
-            }
-            else
-            {
-                // Valid placement, set ghost tower to green
-                ghostRenderer.material.color = Color.green;
-            }
-
-            // On left-click, place the tower if valid
-            if (Input.GetMouseButtonDown(0) && !Physics.CheckSphere(gridPosition, towerRadius, towerLayer))
-            {
-                Instantiate(towerPrefab, gridPosition, Quaternion.identity);
-            }
+            ghostRenderer.material.color = IsValidPlacement(gridPosition) ? Color.green : Color.red;
         }
         else
         {
-            // Hide the ghost tower if the mouse is not over the grid
             ghostTower.SetActive(false);
         }
+    }
+
+    private bool IsValidPlacement(Vector3 position)
+    {
+        return !Physics.CheckSphere(position, towerRadius, towerLayer);
+    }
+
+    private void HandleTowerPlacement()
+    {
+        if (Input.GetMouseButtonDown(0) && IsValidPlacement(ghostTower.transform.position))
+        {
+            PlaceTower(ghostTower.transform.position);
+        }
+    }
+
+    private void PlaceTower(Vector3 position)
+    {
+        GameObject newTower = Instantiate(towerPrefab, position, Quaternion.identity);
+        placedTowers.Add(newTower); // Add the new tower to the list
+    }
+
+    // Method to get the list of placed towers
+    public List<GameObject> GetPlacedTowers()
+    {
+        return placedTowers;
+    }
+
+    public void Upgrade()
+    {
+        for (int i = 0; i < placedTowers.Count; i++)
+        {
+            Tower tower = placedTowers[i].GetComponent<Tower>();
+            tower.SpannerEnable();
+        }
+    }
+
+    public void EnableTowerPlacement()
+    {
+        upgradebool = true;
+    }
+    public void DisableTowerPlacement()
+    {
+        upgradebool = false;
     }
 }
